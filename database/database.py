@@ -3,7 +3,7 @@ import os
 #import null as null
 import psycopg2 as psycopg2
 from configparser import ConfigParser
-import ssh_vars as ssh #not use for erva
+from database import ssh_vars as ssh
 from sshtunnel import SSHTunnelForwarder
 
 class database:
