@@ -18,8 +18,6 @@ class preprocessing:
 
 
     def preprocess(self):
-        #1- punc 2- toke 3-stop 4- Stemming or Lemmatization
-        #stemming genelde kırparak köke ayırır Lemmatization genelde morfolojik kökünü analiz etmeye çalışır ama ikisi de köke ayırır temelde.
         sql = """ UPDATE eng_texts_tab
                                     SET pre_title = %s, pre_content = %s
                                     WHERE id = %s"""
@@ -28,14 +26,6 @@ class preprocessing:
         db.select(["title", "content"])
         db.table("eng_texts_tab")
         datas = db.get_result()
-
-        #for index, data in enumerate(datas, start=1):
-        #    pre_data = self.tokenization(data)
-        #    pre_data = self.remove_punctuation(pre_data)
-        #    pre_data = self.remove_stopword(pre_data)
-        #    pre_data = self.lemmatization(pre_data)
-        #    self.update_data(index, json.dumps(pre_data[0]), json.dumps(pre_data[1]))
-
 
         try:
             params = db.config()  # read database configuration
