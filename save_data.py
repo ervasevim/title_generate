@@ -18,7 +18,7 @@ class save_data:
             conn = psycopg2.connect(**params)
             # create a cursor
             cursor = conn.cursor()
-            DIR = 'YOUR DIR'
+            DIR = 'C:/Users/casper/Desktop/Kaynaklar/Bitirme çalışması/datasets/81000 eng news'
             files = os.listdir(DIR)
             total_file = len([name for name in os.listdir(DIR) if os.path.isfile(os.path.join(DIR, name))])
             for row in files:

@@ -107,10 +107,14 @@ class database:
         :param none
         :return void
         """
-        # Stop the tunnel
-        self.tunnel.stop()
-        # close the communication with the PostgreSQL
-        self.db.close()
+        try:
+           # Stop the tunnel
+            self.tunnel.stop()
+            # close the communication with the PostgreSQL
+            self.db.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+
 
     def select(self, sel):
         """
@@ -176,7 +180,7 @@ class database:
                             " , ".join(self.__select) +
                             " FROM " + self.__from +
                             " WHERE " + self.__where
-                            + "ORDER BY id")
+                            + " ORDER BY id")
             self.__result = self.db.fetchall()
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
