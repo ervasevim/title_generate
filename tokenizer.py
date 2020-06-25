@@ -1,16 +1,18 @@
 from keras.models import Model
-from keras.layers import Bidirectional
+from tensorflow.keras.layers import Bidirectional
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 import os
 from keras.preprocessing.sequence import pad_sequences
 from database.database import database
 from attention import attention as att
-from keras.layers.normalization import BatchNormalization
-from keras.layers import Dense, Input, LSTM, Embedding, Dropout
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.layers import Dense, Input, LSTM, Embedding, Dropout
 
-BASE_DIR = 'C:/Users/casper/Desktop/klasörler/tez/glove'
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.models import Sequential
+from AttentionDecoder import AttentionDecoder
+
+BASE_DIR = 'C:/PythonProjects/title_generate/glove'
 GLOVE_DIR = os.path.join(BASE_DIR, 'glove.6B')
 TEXT_DATA_DIR = os.path.join(BASE_DIR, '20_newsgroup')
 MAX_SEQUENCE_LENGTH = 1000  # max_review_length   maxlen
@@ -39,6 +41,7 @@ class tokenizer:
         db.table("eng_texts_tab")
         train_datas = db.get_result()
 
+
         db = database()
         db.select(["pre_title", "pre_content", "is_test"])
         db.where("is_test = true")
@@ -51,15 +54,15 @@ class tokenizer:
             index += 1
             train_title.append(self.listToString(data[0]))
             train_content.append(self.listToString(data[1]))
-            if index == 2000: #1800 train 200 validate
-                break
+            #if index == 2000: #1800 train 200 validate
+            #    break
         index2 = 0
         for data in test_datas:
             index2 += 1
             test_title.append(self.listToString(data[0]))
             test_content.append(self.listToString(data[1]))
-            if index2 == 10:
-                break
+            #if index2 == 10:
+            #    break
 
         print('Processing text dataset')
 
@@ -115,57 +118,18 @@ class tokenizer:
         print("BidLSTM START")
         inp = Input(shape=(MAX_SEQUENCE_LENGTH,))
         print(inp)
-        x = Embedding(MAX_NUM_WORDS, EMBEDDING_DIM, weights=[embedding_matrix],
-                      trainable=False)(inp)
-        x = Bidirectional(LSTM(300, return_sequences=True, dropout=0.25,
-                               recurrent_dropout=0.25))(x)  #300 units
-        x = att(MAX_SEQUENCE_LENGTH)(x)
-        x = Dense(256, activation="relu")(x)
-        x = Dropout(0.25)(x)
-        x = Dense(1000, activation="relu")(x)
-        model = Model(inputs=inp, outputs=x)
+        model = Sequential()
+        model.add(Embedding(MAX_NUM_WORDS, EMBEDDING_DIM, weights=[embedding_matrix], trainable=False) )
+        model.add(Bidirectional(LSTM(300, return_sequences=True, dropout=0.25,
+                                          recurrent_dropout=0.25)))
+        model.add( AttentionDecoder(150, MAX_SEQUENCE_LENGTH) )
+        model.add( Dense(256, activation="relu") )
+        model.add(Dropout(0.25))
+        model.add(Dense(1000, activation='sigmoid'))
 
         return model
 
-    def LSTM(self,embedding_matrix):
-        print( "LSTM START")
-        xtr, xte, y, word_index = self.tokenizer()
-        embedding_layer = Embedding(MAX_NUM_WORDS,
-                                    EMBEDDING_DIM,
-                                    weights=[embedding_matrix],
-                                    input_length=MAX_SEQUENCE_LENGTH,
-                                    trainable=False)
 
-        lstm_layer = LSTM(num_lstm, dropout=rate_drop_lstm, recurrent_dropout=rate_drop_lstm, return_sequences=True)
-
-        comment_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
-        embedded_sequences = embedding_layer(comment_input)
-        x = lstm_layer(embedded_sequences)
-        x = Dropout(rate_drop_dense)(x)
-        merged = att(MAX_SEQUENCE_LENGTH)(x)
-        merged = Dense(num_dense, activation=act)(merged)
-        merged = Dropout(rate_drop_dense)(merged)
-        merged = BatchNormalization()(merged)
-        preds = Dense(6, activation='sigmoid')(merged)
-
-        ## train the model
-        model = Model(inputs=[comment_input], outputs=preds)
-        model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
-        print(model.summary())
-
-        STAMP = 'simple_lstm_glove_vectors_%.2f_%.2f' % (rate_drop_lstm, rate_drop_dense)
-        print(STAMP)
-
-        early_stopping = EarlyStopping(monitor='val_loss', patience=5)
-        bst_model_path = STAMP + '.h5'
-        model_checkpoint = ModelCheckpoint(bst_model_path, save_best_only=True, save_weights_only=True)
-
-        #hist = model.fit(len(xtr), len(y), validation_data=(xtr, y), epochs=50, batch_size=256, shuffle=True, callbacks=[early_stopping, model_checkpoint])
-
-        hist = model.fit(xtr, y, batch_size=32, epochs=4, validation_split=0.1)
-
-        model.load_weights(bst_model_path)
-        bst_val_score = min(hist.history['val_loss'])
 
     def listToString(self, s):
         str1 = " "

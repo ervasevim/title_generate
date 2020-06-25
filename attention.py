@@ -3,9 +3,9 @@ from keras.engine.topology import Layer
 from keras import initializers, regularizers, constraints
 import os
 
-BASE_DIR = 'C:/Users/casper/Desktop/klasörler/tez/glove'
-GLOVE_DIR = os.path.join(BASE_DIR, 'glove.6B')
-TEXT_DATA_DIR = os.path.join(BASE_DIR, '20_newsgroup')
+# BASE_DIR = 'C:/Users/casper/Desktop/klasörler/tez/glove'
+# GLOVE_DIR = os.path.join(BASE_DIR, 'glove.6B')
+# TEXT_DATA_DIR = os.path.join(BASE_DIR, '20_newsgroup')
 MAX_SEQUENCE_LENGTH = 1000  # max_review_length   maxlen
 MAX_NUM_WORDS = 33000  # the number of possible tokens,  (1 + maximum word index),    ##max_features
 EMBEDDING_DIM = 100  # the dimensionality of the embeddings  embed_size =300
