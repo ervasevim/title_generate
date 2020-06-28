@@ -4,7 +4,7 @@ import os
 import psycopg2 as psycopg2
 from configparser import ConfigParser
 from database import ssh_vars as ssh
-from sshtunnel import SSHTunnelForwarder
+# from sshtunnel import SSHTunnelForwarder
 
 class database:
     db = None
@@ -17,7 +17,7 @@ class database:
     __result = {}
 
     def __init__(self):
-        self.connect_e()
+        self.connect()
 
 
     def config(self, file_name='database.ini', section='postgresql'):
@@ -59,14 +59,6 @@ class database:
             # read connection parameters
             params = self.config()
             # start tunnel because of vagrant
-            self.tunnel = SSHTunnelForwarder(
-                (ssh.SSH_ADDRESS, ssh.SSH_PORT),
-                ssh_username='vagrant',
-                ssh_password='vagrant',
-                remote_bind_address=('localhost', 5432),
-                local_bind_address=('localhost', 5432),  # could be any available port
-            )
-            self.tunnel.start()
 
             # connect to the PostgreSQL server
             conn = psycopg2.connect(**params)
@@ -194,6 +186,9 @@ class database:
         self.__where = ""
 
         return self.__result
+
+    def clear_select(self):
+        self.__select = []
 
     def insert (self, table_name, title):
         """

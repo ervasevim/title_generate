@@ -71,9 +71,12 @@ class tokenizer:
         # Tokenizer objesini başlat
         tokenizer_content = Tokenizer(num_words=MAX_NUM_WORDS)
         tokenizer_title = Tokenizer(num_words=MAX_NUM_WORDS)
+        return_tokenizer_t = tokenizer_title
+        return_tokenizer_c = tokenizer_content
         # her kelimeye benzersiz bir sayı ile temsili atar
         tokenizer_content.fit_on_texts(train_content)
         tokenizer_title.fit_on_texts(train_title)
+
         #her cümleyi bir önceki adımda atanan kelime temsillerini kullanarak bir sayı dizisine çevir.
         list_tokenized_train_content = tokenizer_content.texts_to_sequences(train_content)
         list_tokenized_test_content = tokenizer_content.texts_to_sequences(test_content)
@@ -85,7 +88,7 @@ class tokenizer:
 
         word_index = tokenizer_content.word_index  #tüm kelimeler
 
-        return X_train, X_test, Y_train, word_index
+        return X_train, X_test, Y_train, word_index, return_tokenizer_t, return_tokenizer_c
 
 
     def make_glovevec(self, word_index, veclen=300):
@@ -120,12 +123,11 @@ class tokenizer:
         print(inp)
         model = Sequential()
         model.add(Embedding(MAX_NUM_WORDS, EMBEDDING_DIM, weights=[embedding_matrix], trainable=False) )
-        model.add(Bidirectional(LSTM(300, return_sequences=True, dropout=0.25,
-                                          recurrent_dropout=0.25)))
-        model.add( AttentionDecoder(150, MAX_SEQUENCE_LENGTH) )
+        model.add(LSTM(32))
+        # model.add( AttentionDecoder(150, MAX_SEQUENCE_LENGTH) )
         model.add( Dense(256, activation="relu") )
         model.add(Dropout(0.25))
-        model.add(Dense(1000, activation='sigmoid'))
+        model.add(Dense(1000, activation='softmax'))
 
         return model
 
