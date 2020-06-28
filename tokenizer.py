@@ -11,12 +11,14 @@ from tensorflow.keras.layers import Dense, Input, LSTM, Embedding, Dropout
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.models import Sequential
 from AttentionDecoder import AttentionDecoder
+import sys
 
 BASE_DIR = 'C:/PythonProjects/title_generate/glove'
 GLOVE_DIR = os.path.join(BASE_DIR, 'glove.6B')
 TEXT_DATA_DIR = os.path.join(BASE_DIR, '20_newsgroup')
-MAX_SEQUENCE_LENGTH = 1000  # max_review_length   maxlen
-MAX_NUM_WORDS = 33000  # the number of possible tokens,  (1 + maximum word index),    ##max_features
+MAX_SEQUENCE_LENGTH = 256  # max_review_length   maxlen
+MAX_SEQUENCE_LENGTH_TITLE = 256  # max_review_length   maxlen
+MAX_NUM_WORDS = 256  # the number of possible tokens,  (1 + maximum word index),    ##max_features
 EMBEDDING_DIM = 100  # the dimensionality of the embeddings  embed_size =100
 VALIDATION_SPLIT = 0.2
 train_title = []
@@ -31,65 +33,43 @@ rate_drop_lstm = 0.25
 rate_drop_dense = 0.25
 
 act = 'relu'
-
+all_data = []
+contents = []
+titles   = []
 
 class tokenizer:
     def __init__(self):
         db = database()
-        db.select(["pre_title", "pre_content", "is_test"])
-        db.where("is_test = false")
+        db.select(["title", "content", "is_test"])
+        # db.where("is_test = false")
         db.table("eng_texts_tab")
-        train_datas = db.get_result()
+        all_datas = db.get_result()
+
+        tot_num_words = 0
+
+        for data in all_datas:
+            all_data.append(data[0])
+            all_data.append(data[1] )
+            titles.append(data[0] )
+            contents.append(data[1] )
+            tot_num_words += len(data[0])
+            tot_num_words += len(data[1])
 
 
-        db = database()
-        db.select(["pre_title", "pre_content", "is_test"])
-        db.where("is_test = true")
-        db.table("eng_texts_tab")
-        test_datas = db.get_result()
-
-
-        index = 0
-        for data in train_datas:
-            index += 1
-            train_title.append(self.listToString(data[0]))
-            train_content.append(self.listToString(data[1]))
-            #if index == 2000: #1800 train 200 validate
-            #    break
-        index2 = 0
-        for data in test_datas:
-            index2 += 1
-            test_title.append(self.listToString(data[0]))
-            test_content.append(self.listToString(data[1]))
-            #if index2 == 10:
-            #    break
-
-        print('Processing text dataset')
 
 
     def tokenizer(self):
-        # Tokenizer objesini başlat
-        tokenizer_content = Tokenizer(num_words=MAX_NUM_WORDS)
-        tokenizer_title = Tokenizer(num_words=MAX_NUM_WORDS)
-        return_tokenizer_t = tokenizer_title
-        return_tokenizer_c = tokenizer_content
-        # her kelimeye benzersiz bir sayı ile temsili atar
-        tokenizer_content.fit_on_texts(train_content)
-        tokenizer_title.fit_on_texts(train_title)
+        my_tokenizer = Tokenizer(num_words=MAX_NUM_WORDS)
+        my_tokenizer.fit_on_texts( all_data ) # tüm datayı int atıyor
+        all_tokenized_title = my_tokenizer.texts_to_sequences( titles ) # atanan intleri, wordler ile replace ediyor
+        pad_all_tokenized_title = pad_sequences(all_tokenized_title, maxlen=MAX_SEQUENCE_LENGTH_TITLE)
 
-        #her cümleyi bir önceki adımda atanan kelime temsillerini kullanarak bir sayı dizisine çevir.
-        list_tokenized_train_content = tokenizer_content.texts_to_sequences(train_content)
-        list_tokenized_test_content = tokenizer_content.texts_to_sequences(test_content)
-        list_tokenized_train_title = tokenizer_content.texts_to_sequences(train_title)
-        #tüm cümleleri aynı uzunlukta(MAX_SEQUENCE_LENGTH) yap
-        X_train = pad_sequences(list_tokenized_train_content, maxlen=MAX_SEQUENCE_LENGTH)
-        X_test = pad_sequences(list_tokenized_test_content, maxlen=MAX_SEQUENCE_LENGTH)
-        Y_train = pad_sequences(list_tokenized_train_title, maxlen=MAX_SEQUENCE_LENGTH)
+        all_tokenized_content = my_tokenizer.texts_to_sequences( titles ) # atanan intleri, wordler ile replace ediyor
+        pad_all_tokenized_content = pad_sequences(all_tokenized_content, maxlen=MAX_SEQUENCE_LENGTH)
 
-        word_index = tokenizer_content.word_index  #tüm kelimeler
+        word_index = my_tokenizer.word_index
 
-        return X_train, X_test, Y_train, word_index, return_tokenizer_t, return_tokenizer_c
-
+        return pad_all_tokenized_content, pad_all_tokenized_title , word_index, my_tokenizer
 
     def make_glovevec(self, word_index, veclen=300):
         embeddings_index = {}
@@ -104,12 +84,13 @@ class tokenizer:
 
         num_words = min(MAX_NUM_WORDS, len(word_index) + 1)
         embedding_matrix = np.zeros((num_words, EMBEDDING_DIM))
+        counter = 0
         for word, i in word_index.items():
             if i >= MAX_NUM_WORDS:
                 continue
             embedding_vector = embeddings_index.get(word)
             if embedding_vector is not None:
-                #kelime yoksa embedding index 0 olur
+                # kelime yoksa embedding index 0 olur
                 embedding_matrix[i] = embedding_vector
         print("make_glovevec END")
 
@@ -123,11 +104,11 @@ class tokenizer:
         print(inp)
         model = Sequential()
         model.add(Embedding(MAX_NUM_WORDS, EMBEDDING_DIM, weights=[embedding_matrix], trainable=False) )
-        model.add(LSTM(32))
+        model.add( LSTM(100))
         # model.add( AttentionDecoder(150, MAX_SEQUENCE_LENGTH) )
-        model.add( Dense(256, activation="relu") )
-        model.add(Dropout(0.25))
-        model.add(Dense(1000, activation='softmax'))
+        model.add( Dense(1000, activation="relu") )
+        model.add(Dropout(0.5))
+        model.add(Dense(256, activation='softmax'))
 
         return model
 
@@ -137,3 +118,25 @@ class tokenizer:
         str1 = " "
         return (str1.join(s))
 
+    def tokenizer2(self):
+        # Tokenizer objesini başlat
+        tokenizer_content = Tokenizer(num_words=MAX_NUM_WORDS)
+        tokenizer_title = Tokenizer(num_words=MAX_NUM_WORDS)
+        return_tokenizer_t = tokenizer_title
+        return_tokenizer_c = tokenizer_content
+        # her kelimeye benzersiz bir sayı ile temsili atar
+        tokenizer_content.fit_on_texts(train_content)
+        tokenizer_title.fit_on_texts(train_title)
+
+        # her cümleyi bir önceki adımda atanan kelime temsillerini kullanarak bir sayı dizisine çevir.
+        list_tokenized_train_content = tokenizer_content.texts_to_sequences(train_content)
+        list_tokenized_test_content = tokenizer_content.texts_to_sequences(test_content)
+        list_tokenized_train_title = tokenizer_content.texts_to_sequences(train_title)
+        # tüm cümleleri aynı uzunlukta(MAX_SEQUENCE_LENGTH) yap
+        X_train = pad_sequences(list_tokenized_train_content, maxlen=MAX_SEQUENCE_LENGTH)
+        X_test = pad_sequences(list_tokenized_test_content, maxlen=MAX_SEQUENCE_LENGTH)
+        Y_train = pad_sequences(list_tokenized_train_title, maxlen=MAX_SEQUENCE_LENGTH)
+
+        word_index = tokenizer_content.word_index  # tüm kelimeler
+
+        return X_train, X_test, Y_train, word_index, return_tokenizer_t, return_tokenizer_c

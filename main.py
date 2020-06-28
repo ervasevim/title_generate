@@ -14,42 +14,39 @@ if __name__ == "__main__":
     max_features = 100000
     maxlen = 150
     embed_size = 100
-    xtr, xte, y, word_index, my_tokenizer_t, my_tokenizer_c = tk.tokenizer()
-    db = database()
-    # print(len(word_index))
+    tokenized_content, tokenized_title, word_index, my_tokenizer = tk.tokenizer()
+    print(len(tokenized_content))
+    print(len(tokenized_title))
+    print("tokenized end")
     embedding_vector = tk.make_glovevec(word_index)
-    # print(len(embedding_vector))
-    # sys.exit()
+    print("glove end")
+    print(len(embedding_vector))
 
     model = tk.BidLstm(embedding_vector)
-
-
 
     print("model compile started")
 
     #model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    #model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    #model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
 
     #file_path = "./model.hdf5"
     #ckpt = ModelCheckpoint(file_path, monitor='val_loss', verbose=1,
     #                       save_best_only=True, mode='min')
     #early = EarlyStopping(monitor="val_loss", mode="min", patience=1)
 
-    print("model fit started")#
-    print(y.shape)
-    print(xtr.shape)
+    print("model fit started")
+
     #model.fit(xtr, y, batch_size=64, epochs=1, validation_split=0.1, callbacks=[ckpt, early])
-    model.fit(xtr, y, batch_size=64 , epochs=7, validation_split=0.1)
+    model.fit(tokenized_content[:30000], tokenized_title[:30000], batch_size=512 , epochs=10)
 
     # save model and architecture to single file
-    model.save("model3_only_lstm")
+    model.save("model4_new_tokenizer2.h5")
     print("Saved model to disk")
+    sys.exit()
+    file = open(r"C:/PythonProjects/title_generate/results/new_tokenizer.txt", "w+")
 
-    file_c = open(r"C:/PythonProjects/title_generate/results/result_c2.txt", "w+")
-    file_t = open(r"C:/PythonProjects/title_generate/results/result_t2.txt", "w+")
-
-    for content in xte:
+    for content in tokenized_content[20001:]:
         text = []
         encoded_arr = []
         cumle = model.predict(content)
@@ -57,20 +54,13 @@ if __name__ == "__main__":
             kelime_sayi = np.argmax(kelime_vektor, axis=0)
             encoded_arr.append(kelime_sayi)
 
-        text_t = my_tokenizer_t.sequences_to_texts([encoded_arr])
-        text_c = my_tokenizer_c.sequences_to_texts([encoded_arr])
-
-        file_t.write(' '.join(text_t))
-        file_t.write('\r\n')
-
-        file_c.write(' '.join(text_c))
-        file_c.write('\r\n')
-
-    file_t.close()
-    file_c.close()
+        text = my_tokenizer.sequences_to_texts([encoded_arr])
+        file.write(' '.join(text))
+        file.write('\r\n')
+    file.close()
 
     sys.exit()
-
+    #******************************************* END CODE ***********************************************************#
     #model.load_weights(file_path)
     y_test = model.predict(xte[1])
 
